@@ -1,4 +1,4 @@
-# 0csv2db
+# csv2db
 
 Bulk CSV files uploader into Microsoft SQL Server.
 
