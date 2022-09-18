@@ -1,0 +1,1 @@
+go build -trimpath -buildmode=pie -ldflags "-linkmode external -s -w"
