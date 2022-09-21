@@ -8,7 +8,7 @@ import (
 func processZipFile(filePath string) error {
 	r, err := zip.OpenReader(filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("open ZIP file: %v", err)
 	}
 
 	if len(r.File) != 1 {
@@ -17,7 +17,7 @@ func processZipFile(filePath string) error {
 
 	zipFileReader, err := r.File[0].Open()
 	if err != nil {
-		return err
+		return fmt.Errorf("open file from ZIP archive: %v", err)
 	}
 	defer zipFileReader.Close()
 

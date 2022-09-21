@@ -18,16 +18,19 @@ import (
 
 var db *sql.DB
 var opts struct {
-	FilePath       string `short:"f" long:"file" description:"CSV file path" required:"true"`
-	ServerAddress  string `short:"s" long:"server" description:"server address" default:"127.0.0.1"`
-	DatabaseName   string `short:"d" long:"database" description:"database name" required:"true"`
-	TableName      string `short:"t" long:"table" description:"table name" required:"true"`
-	FieldTypes     string `short:"l" long:"fields" description:"field types" required:"true"`
-	Comma          string `short:"c" long:"comma" description:"CSV file comma character" choice:"," choice:";" choice:"t" default:","`
-	CreateTable    bool   `short:"x" long:"create" description:"create table"`
-	OverwriteTable bool   `short:"o" long:"overwrite" description:"overwrite existing table"`
-	Encoding       string `short:"e" long:"encoding" description:"CSV file charset" choice:"utf8" choice:"win1251" default:"utf8"`
-	SkipRows       int    `short:"r" long:"skiprows" description:"number of rows to skip"`
+	FilePath           string `long:"filepath" description:"CSV file path" required:"true"`
+	ServerAddress      string `long:"server" description:"server address" default:"127.0.0.1"`
+	DatabaseName       string `long:"database" description:"database name" required:"true"`
+	TableName          string `long:"table" description:"table name in schema.name format" required:"true"`
+	FieldTypes         string `long:"fields" description:"field types in [sifdt ] format" required:"true"`
+	Comma              string `long:"comma" description:"CSV file comma character" choice:"," choice:";" choice:"t" default:","`
+	CreateTable        bool   `long:"create" description:"create table"`
+	OverwriteTable     bool   `long:"overwrite" description:"overwrite existing table"`
+	Encoding           string `long:"encoding" description:"CSV file charset" choice:"utf8" choice:"win1251" default:"utf8"`
+	SkipRows           int    `long:"skiprows" description:"number of rows to skip"`
+	DateFormat         string `long:"dateformat" description:"date format (Go style)" default:"02.01.2006"`
+	TimestampFormat    string `long:"timestampformat" description:"timestamp format  (Go style)" default:"02.01.2006 15:04:05"`
+	UnknownColumnNames bool   `long:"unknowncolumnnames" description:"insert to table with unknown column names"`
 }
 
 func init() {
@@ -71,24 +74,21 @@ func processReader(r io.Reader) error {
 
 	bufReader := bufio.NewReaderSize(decoder, 4*1024*1024)
 
+	for i := 0; i < opts.SkipRows; i++ {
+		_, _, err := bufReader.ReadLine()
+		if err != nil {
+			return fmt.Errorf("skip rows: %v", err)
+		}
+	}
+
 	reader := csv.NewReader(bufReader)
-	reader.TrimLeadingSpace = true
+	reader.TrimLeadingSpace = false
 	reader.FieldsPerRecord = len(opts.FieldTypes)
 
 	if []rune(opts.Comma)[0] == 't' {
 		reader.Comma = '\t'
 	} else {
 		reader.Comma = []rune(opts.Comma)[0]
-	}
-
-	for i := 0; i < opts.SkipRows; i++ {
-		_, err := reader.Read()
-		if err == csv.ErrFieldCount {
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("skip rows: %v", err)
-		}
 	}
 
 	header, err := reader.Read()
@@ -112,12 +112,38 @@ func processReader(r io.Reader) error {
 	}
 
 	var neededHeader []string
-	for i, v := range header {
-		if opts.FieldTypes[i] == ' ' {
-			continue
-		}
 
-		neededHeader = append(neededHeader, v)
+	if opts.UnknownColumnNames {
+		sql := fmt.Sprintf("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA + '.' + TABLE_NAME = '%s' ORDER BY ORDINAL_POSITION", opts.TableName)
+		rows, err := db.Query(sql)
+		if err != nil {
+			return fmt.Errorf("get column names from database: %v", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			if rows.Err() != nil {
+				return fmt.Errorf("get column names from database: %v", err)
+			}
+			var columnName string
+			err = rows.Scan(&columnName)
+			if err != nil {
+				return fmt.Errorf("get column names from database: %v", err)
+			}
+			neededHeader = append(neededHeader, columnName)
+		}
+	} else {
+		for i, v := range header {
+			if opts.FieldTypes[i] == ' ' {
+				continue
+			}
+
+			neededHeader = append(neededHeader, v)
+		}
+	}
+
+	if len(neededHeader) == 0 {
+		return fmt.Errorf("no columns to process (check table name or field types)")
 	}
 
 	tx, err := db.Begin()
@@ -126,7 +152,7 @@ func processReader(r io.Reader) error {
 	}
 
 	if opts.CreateTable {
-		err = createTable(tx, header)
+		err = createTable(tx, header, opts.FieldTypes)
 		if err != nil {
 			_ = tx.Rollback()
 			return fmt.Errorf("create table: %v", err)

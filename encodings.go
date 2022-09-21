@@ -41,8 +41,10 @@ func (e *Encoding) UnmarshalText(text []byte) error {
 	switch string(text) {
 	case "utf8":
 		*e = Utf8
+		return nil
 	case "win1251":
 		*e = Win1251
+		return nil
 	}
 
 	return fmt.Errorf("unknown encoding: %s", string(text))

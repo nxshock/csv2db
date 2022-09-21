@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func createTable(tx *sql.Tx, header []string) error {
+func createTable(tx *sql.Tx, header []string, fieldTypes string) error {
 	if opts.OverwriteTable {
 		_, err := tx.Exec(fmt.Sprintf("IF object_id('%s', 'U') IS NOT NULL DROP TABLE %s", opts.TableName, opts.TableName))
 		if err != nil {
@@ -17,9 +17,13 @@ func createTable(tx *sql.Tx, header []string) error {
 
 	for i, v := range header {
 		var fieldType FieldType
-		err := fieldType.UnmarshalText([]byte(v))
+		err := fieldType.UnmarshalText([]byte(fieldTypes[i : i+1]))
 		if err != nil {
 			return fmt.Errorf("detect field type: %v", err)
+		}
+
+		if fieldType == Skip {
+			continue
 		}
 
 		sql += fmt.Sprintf(`"%s" %s`, v, fieldType.SqlFieldType())
