@@ -22,6 +22,10 @@ const (
 func (ft FieldType) ParseValue(s string) (any, error) {
 	s = strings.TrimSpace(s)
 
+	if s == "" {
+		return nil, nil
+	}
+
 	switch ft {
 	case String:
 		return s, nil
