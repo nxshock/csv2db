@@ -82,6 +82,7 @@ func processReader(r io.Reader) error {
 	}
 
 	reader := csv.NewReader(bufReader)
+	reader.LazyQuotes = true
 	reader.TrimLeadingSpace = false
 	reader.FieldsPerRecord = len(opts.FieldTypes)
 
