@@ -5,15 +5,15 @@ import (
 	"fmt"
 )
 
-func createTable(tx *sql.Tx, header []string, fieldTypes string) error {
-	if opts.OverwriteTable {
-		_, err := tx.Exec(fmt.Sprintf("IF object_id('%s', 'U') IS NOT NULL DROP TABLE %s", opts.TableName, opts.TableName))
+func createTable(tx *sql.Tx, tableName string, header []string, fieldTypes string, overWrite bool) error {
+	if overWrite {
+		_, err := tx.Exec(fmt.Sprintf("IF object_id('%s', 'U') IS NOT NULL DROP TABLE %s", tableName, tableName))
 		if err != nil {
 			return fmt.Errorf("drop table: %v", err)
 		}
 	}
 
-	sql := fmt.Sprintf("CREATE TABLE %s (", opts.TableName)
+	sql := fmt.Sprintf("CREATE TABLE %s (", tableName)
 
 	for i, v := range header {
 		var fieldType FieldType

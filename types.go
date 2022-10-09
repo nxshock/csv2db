@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/urfave/cli/v2"
 )
 
 type FieldType int
@@ -19,7 +21,7 @@ const (
 	Timestamp
 )
 
-func (ft FieldType) ParseValue(s string) (any, error) {
+func (ft FieldType) ParseValue(c *cli.Context, s string) (any, error) {
 	s = strings.TrimSpace(s)
 
 	if s == "" {
@@ -34,9 +36,9 @@ func (ft FieldType) ParseValue(s string) (any, error) {
 	case Float:
 		return strconv.ParseFloat(strings.ReplaceAll(s, ",", "."), 64)
 	case Date:
-		return time.Parse(opts.DateFormat, s)
+		return time.Parse(c.String("dateformat"), s)
 	case Timestamp:
-		return time.Parse(opts.TimestampFormat, s)
+		return time.Parse(c.String("timestampformat"), s)
 	}
 
 	return nil, fmt.Errorf("unknown type id = %d", ft)

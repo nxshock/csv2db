@@ -3,9 +3,11 @@ package main
 import (
 	"archive/zip"
 	"fmt"
+
+	"github.com/urfave/cli/v2"
 )
 
-func processZipFile(filePath string) error {
+func processZipFile(c *cli.Context, filePath string) error {
 	r, err := zip.OpenReader(filePath)
 	if err != nil {
 		return fmt.Errorf("open ZIP file: %v", err)
@@ -21,5 +23,5 @@ func processZipFile(filePath string) error {
 	}
 	defer zipFileReader.Close()
 
-	return processReader(zipFileReader)
+	return processReader(c, zipFileReader)
 }
