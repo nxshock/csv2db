@@ -28,9 +28,9 @@ var app = &cli.App{
 			Required:  true,
 			TakesFile: true},
 		&cli.StringFlag{
-			Name:        "server",
-			Usage:       "database server address",
-			DefaultText: "127.0.0.1"},
+			Name:  "server",
+			Usage: "database server address",
+			Value: "127.0.0.1"},
 		&cli.StringFlag{
 			Name:     "database",
 			Usage:    "database name",
@@ -44,9 +44,9 @@ var app = &cli.App{
 			Usage:    "list of field types in [sifdt ]+ format",
 			Required: true},
 		&cli.StringFlag{
-			Name:        "comma",
-			Usage:       `CSV file comma character (use 't' for tabs)`,
-			DefaultText: ","},
+			Name:  "comma",
+			Usage: `CSV file comma character (use 't' for tabs)`,
+			Value: ","},
 		&cli.BoolFlag{
 			Name:  "create",
 			Usage: "create table"},
@@ -55,25 +55,28 @@ var app = &cli.App{
 			Usage: "overwrite existing table"},
 		&cli.StringFlag{
 			Name:  "encoding",
-			Usage: `CSV file charset ("utf8", "win1251")`},
+			Usage: `CSV file charset ("utf8", "win1251")`,
+			Value: "utf8"},
 		&cli.IntFlag{
 			Name:  "skiprows",
 			Usage: "number of rows to skip before read CSV file header"},
 		&cli.StringFlag{
-			Name:        "dateformat",
-			Usage:       "date format (Go style)",
-			DefaultText: "02.01.2006"},
+			Name:  "dateformat",
+			Usage: "date format (Go style)",
+			Value: "02.01.2006"},
 		&cli.StringFlag{
-			Name:        "timestampformat",
-			Usage:       "timestamp format (Go style)",
-			DefaultText: "02.01.2006 15:04:05"},
+			Name:  "timestampformat",
+			Usage: "timestamp format (Go style)",
+			Value: "02.01.2006 15:04:05"},
 		&cli.BoolFlag{
 			Name:  "unknowncolumnnames",
 			Usage: "insert to table with unknown column names",
 		},
 	},
 	Action: func(c *cli.Context) error {
-		db, err := sql.Open("sqlserver", fmt.Sprintf("sqlserver://%s?database=%s", c.String("server"), c.String("database")))
+		var err error
+
+		db, err = sql.Open("sqlserver", fmt.Sprintf("sqlserver://%s?database=%s", c.String("server"), c.String("database")))
 		if err != nil {
 			return fmt.Errorf("open database: %v", err)
 		}
@@ -107,6 +110,7 @@ func main() {
 
 func processReader(c *cli.Context, r io.Reader) error {
 	var encoding Encoding
+	fmt.Println(c.String("encoding"))
 	err := encoding.UnmarshalText([]byte(c.String("encoding")))
 	if err != nil {
 		return fmt.Errorf("get decoder: %v", c.String("encoding"))
