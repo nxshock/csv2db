@@ -110,7 +110,7 @@ func main() {
 
 func processReader(c *cli.Context, r io.Reader) error {
 	var encoding Encoding
-	fmt.Println(c.String("encoding"))
+
 	err := encoding.UnmarshalText([]byte(c.String("encoding")))
 	if err != nil {
 		return fmt.Errorf("get decoder: %v", c.String("encoding"))
