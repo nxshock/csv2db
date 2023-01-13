@@ -135,7 +135,7 @@ func processReader(c *cli.Context, r io.Reader) error {
 	reader.TrimLeadingSpace = false
 	reader.FieldsPerRecord = len(c.String("fields"))
 
-	if []rune(c.String("comma"))[0] == 't' {
+	if runes := []rune(c.String("comma")); len(runes) > 0 && runes[0] == 't' {
 		reader.Comma = '\t'
 	} else {
 		reader.Comma = []rune(c.String("comma"))[0]
