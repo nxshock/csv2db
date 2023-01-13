@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -74,6 +75,10 @@ var app = &cli.App{
 		},
 	},
 	Action: func(c *cli.Context) error {
+		if len(strings.Split(c.String("table"), ".")) != 2 {
+			return errors.New("table name must be in schema.name format")
+		}
+
 		var err error
 
 		db, err = sql.Open("sqlserver", fmt.Sprintf("sqlserver://%s?database=%s", c.String("server"), c.String("database")))
