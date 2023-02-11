@@ -73,6 +73,12 @@ var app = &cli.App{
 			Name:  "unknowncolumnnames",
 			Usage: "insert to table with unknown column names",
 		},
+		&cli.BoolFlag{
+			Name:  "withoutheader",
+			Usage: "file does not contains a header"},
+		&cli.BoolFlag{
+			Name:  "silent",
+			Usage: "silens progress output"},
 	},
 	Action: func(c *cli.Context) error {
 		if len(strings.Split(c.String("table"), ".")) != 2 {
@@ -146,23 +152,26 @@ func processReader(c *cli.Context, r io.Reader) error {
 		reader.Comma = []rune(c.String("comma"))[0]
 	}
 
-	header, err := reader.Read()
-	if err != nil {
-		return fmt.Errorf("read header: %v", err)
-	}
-
-	headerList := `"`
-	for i, v := range header {
-		if c.String("fields")[i] == ' ' {
-			continue
+	var header []string
+	if !c.Bool("withoutheader") {
+		header, err = reader.Read()
+		if err != nil {
+			return fmt.Errorf("read header: %v", err)
 		}
 
-		headerList += v
+		headerList := `"`
+		for i, v := range header {
+			if c.String("fields")[i] == ' ' {
+				continue
+			}
 
-		if i+1 < len(header) {
-			headerList += `", "`
-		} else {
-			headerList += `"`
+			headerList += v
+
+			if i+1 < len(header) {
+				headerList += `", "`
+			} else {
+				headerList += `"`
+			}
 		}
 	}
 
@@ -207,7 +216,7 @@ func processReader(c *cli.Context, r io.Reader) error {
 	}
 
 	if c.Bool("create") {
-		err = createTable(tx, c.String("table"), header, c.String("fields"), c.Bool("overwrite"))
+		err = createTable(tx, c.String("table"), neededHeader, c.String("fields"), c.Bool("overwrite"))
 		if err != nil {
 			_ = tx.Rollback()
 			return fmt.Errorf("create table: %v", err)
@@ -225,7 +234,9 @@ func processReader(c *cli.Context, r io.Reader) error {
 	n := 0
 	for {
 		if n%100000 == 0 {
-			fmt.Fprintf(os.Stderr, "Processed %d records...\r", n)
+			if !c.Bool("silent") {
+				fmt.Fprintf(os.Stderr, "Processed %d records...\r", n)
+			}
 		}
 
 		record, err := reader.Read()
@@ -274,7 +285,9 @@ func processReader(c *cli.Context, r io.Reader) error {
 		_ = tx.Rollback()
 		return fmt.Errorf("calc rows affected: %v", err)
 	}
-	fmt.Fprintf(os.Stderr, "Processed %d records.  \n", rowsAffected)
+	if !c.Bool("silent") {
+		fmt.Fprintf(os.Stderr, "Processed %d records.  \n", rowsAffected)
+	}
 
 	err = stmt.Close()
 	if err != nil {
